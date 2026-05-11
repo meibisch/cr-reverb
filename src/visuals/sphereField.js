@@ -2,8 +2,6 @@ import * as THREE from 'three';
 import vertShader from '../shaders/particle.vert.glsl?raw';
 import fragShader from '../shaders/sphere.frag.glsl?raw';
 
-const PARTICLE_COUNT = 50000;
-
 const BASE_AMP  = 0.05;
 const AUDIO_AMP = 0.35;
 const ATTACK    = 0.18;
@@ -28,7 +26,8 @@ const NDC_SCALE_X = 3.3;
 const NDC_SCALE_Y = 1.87;
 
 
-export function createSphereField() {
+export function createSphereField(particleCount = 50000) {
+  const PARTICLE_COUNT = particleCount;
   const homePos = new Float32Array(PARTICLE_COUNT * 3);
   const phases  = new Float32Array(PARTICLE_COUNT * 3);
   const freqs   = new Float32Array(PARTICLE_COUNT);
@@ -94,9 +93,8 @@ export function createSphereField() {
     wave.strength = 1.0;
   }
 
-  function setVisible(bool) {
-    points.visible = bool;
-  }
+  function setVisible(bool) { points.visible = bool; }
+  function setScale(s)      { points.scale.set(s, s, s); }
 
   function update(features, time, mouseX = 0, mouseY = 0) {
     uniforms.uLoudness.value    = features.loudness;
@@ -183,5 +181,5 @@ export function createSphereField() {
     wave.active = false; wave.progress = 0; wave.strength = 0;
   }
 
-  return { points, update, triggerOnset, triggerWave, setVisible, resetPositions };
+  return { points, update, triggerOnset, triggerWave, setVisible, setScale, resetPositions };
 }

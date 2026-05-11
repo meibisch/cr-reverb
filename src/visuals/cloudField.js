@@ -2,8 +2,6 @@ import * as THREE from 'three';
 import vertShader from '../shaders/cloud.vert.glsl?raw';
 import fragShader from '../shaders/cloud.frag.glsl?raw';
 
-const PARTICLE_COUNT = 50000;
-
 const BASE_AMP  = 0.03;
 const AUDIO_AMP = 0.14;
 const ATTACK    = 0.18;
@@ -40,7 +38,8 @@ function gaussianRandom() {
 }
 
 
-export function createCloudField() {
+export function createCloudField(particleCount = 50000) {
+  const PARTICLE_COUNT = particleCount;
   const homePos   = new Float32Array(PARTICLE_COUNT * 3);
   const phases    = new Float32Array(PARTICLE_COUNT * 3);
   const freqs     = new Float32Array(PARTICLE_COUNT);
@@ -103,6 +102,7 @@ export function createCloudField() {
   function triggerOnset() { onsetCountdown = 60; }
   function triggerWave()  {} // no wave for clouds
   function setVisible(bool) { points.visible = bool; }
+  function setScale(s)      { points.scale.set(s, s, s); }
 
   function applyWind(worldX, worldY, holding) {
     isBlowing = holding;
@@ -184,5 +184,5 @@ export function createCloudField() {
     isBlowing = false;
   }
 
-  return { points, update, triggerOnset, triggerWave, applyWind, setVisible, resetPositions };
+  return { points, update, triggerOnset, triggerWave, applyWind, setVisible, setScale, resetPositions };
 }

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import {
   loadAudio,
+  unload,
+  stop,
   toggle,
   getIsPlaying,
   getFrequencyData,
@@ -26,11 +28,19 @@ const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerH
 camera.position.set(0, 0, 4);
 camera.lookAt(0, 0, 0);
 
+// ── Mobile detection + particle budget ───────────────────────────────────────
+
+function isMobile() {
+  return window.innerWidth < 768 || /Mobi|Android/i.test(navigator.userAgent);
+}
+
+const PARTICLE_COUNT = isMobile() ? 25000 : 50000;
+
 // ── Visuals ───────────────────────────────────────────────────────────────────
 
-const sphereField = createSphereField();
-const fireField   = createFireField();
-const cloudField  = createCloudField();
+const sphereField = createSphereField(PARTICLE_COUNT);
+const fireField   = createFireField(PARTICLE_COUNT);
+const cloudField  = createCloudField(PARTICLE_COUNT);
 
 scene.add(sphereField.points);
 scene.add(fireField.points);
@@ -43,6 +53,15 @@ const VISUALS    = { sphere: sphereField, fire: fireField, cloud: cloudField };
 let activeVisual = sphereField;
 fireField.setVisible(false);
 cloudField.setVisible(false);
+
+// ── Scene scale (responsive sizing) ──────────────────────────────────────────
+
+function computeSceneScale() {
+  return Math.max(0.35, Math.min(1.0, window.innerWidth / 1440));
+}
+
+let sceneScale = computeSceneScale();
+Object.values(VISUALS).forEach(v => v.setScale(sceneScale));
 
 function switchVisual(index) {
   activeVisual.setVisible(false);
@@ -68,6 +87,9 @@ const trackBtns = document.querySelectorAll('.track-btn');
 async function loadTrack(index) {
   trackBtns.forEach((b, i) => b.classList.toggle('active', i === index));
   playBtn.classList.remove('playing');
+  // Immediately stop + clear buffer so Play can't replay the old song during load
+  stop();
+  unload();
   switchVisual(index);
   try {
     await loadAudio(`/audio/${TRACKS[index].file}`);
@@ -92,12 +114,19 @@ function showControls() {
   hideTimer = setTimeout(() => controls.classList.remove('visible'), 2800);
 }
 
-// Show on any mouse movement
 window.addEventListener('mousemove', showControls);
-
-// Visible on load for 4 seconds
 controls.classList.add('visible');
 hideTimer = setTimeout(() => controls.classList.remove('visible'), 4000);
+
+// On touch devices: keep controls always visible
+if (isMobile()) {
+  clearTimeout(hideTimer);
+  controls.classList.add('visible');
+  window.addEventListener('touchstart', () => {
+    clearTimeout(hideTimer);
+    controls.classList.add('visible');
+  }, { passive: true });
+}
 
 // ── Play UI ───────────────────────────────────────────────────────────────────
 
@@ -114,7 +143,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// ── Mouse + Click ─────────────────────────────────────────────────────────────
+// ── Mouse ─────────────────────────────────────────────────────────────────────
 
 let mouseX      = 0;
 let mouseY      = 0;
@@ -132,17 +161,49 @@ renderer.domElement.addEventListener('mousedown', () => { isMouseHeld = true; })
 window.addEventListener('mouseup',    () => { isMouseHeld = false; });
 window.addEventListener('mouseleave', () => { isMouseHeld = false; });
 
+// Click → wave / sparks (desktop)
 window.addEventListener('click', e => {
   if (!getIsPlaying()) return;
   if (e.target.closest('#controls')) return;
-  const worldX =  (e.clientX / window.innerWidth  * 2 - 1) * NDC_SCALE_X;
-  const worldY = -(e.clientY / window.innerHeight * 2 - 1) * NDC_SCALE_Y;
-  if (activeVisual === VISUALS['sphere']) {
-    activeVisual.triggerWave(worldX, worldY);
-  } else if (activeVisual === VISUALS['fire']) {
-    activeVisual.triggerSparks(worldX, worldY);
+  const worldX = ((e.clientX / window.innerWidth  * 2 - 1) * NDC_SCALE_X) / sceneScale;
+  const worldY = (-(e.clientY / window.innerHeight * 2 - 1) * NDC_SCALE_Y) / sceneScale;
+  if (activeVisual === VISUALS['sphere']) activeVisual.triggerWave(worldX, worldY);
+  else if (activeVisual === VISUALS['fire']) activeVisual.triggerSparks(worldX, worldY);
+});
+
+// ── Touch ─────────────────────────────────────────────────────────────────────
+
+let touchStartX = 0, touchStartY = 0;
+
+renderer.domElement.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+  isMouseHeld = true;
+  mouseX =  (t.clientX / window.innerWidth)  * 2 - 1;
+  mouseY = -(t.clientY / window.innerHeight) * 2 + 1;
+}, { passive: false });
+
+renderer.domElement.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  mouseX =  (t.clientX / window.innerWidth)  * 2 - 1;
+  mouseY = -(t.clientY / window.innerHeight) * 2 + 1;
+  showControls();
+}, { passive: false });
+
+renderer.domElement.addEventListener('touchend', e => {
+  isMouseHeld = false;
+  const t   = e.changedTouches[0];
+  const dx  = t.clientX - touchStartX;
+  const dy  = t.clientY - touchStartY;
+  if (Math.sqrt(dx * dx + dy * dy) < 12 && getIsPlaying()) {
+    const worldX = ((t.clientX / window.innerWidth  * 2 - 1) * NDC_SCALE_X) / sceneScale;
+    const worldY = (-(t.clientY / window.innerHeight * 2 - 1) * NDC_SCALE_Y) / sceneScale;
+    if (activeVisual === VISUALS['sphere']) activeVisual.triggerWave(worldX, worldY);
+    else if (activeVisual === VISUALS['fire']) activeVisual.triggerSparks(worldX, worldY);
   }
-  // cloud: wind uses mousedown/up, no click handler
 });
 
 // ── Render loop ───────────────────────────────────────────────────────────────
@@ -165,9 +226,8 @@ function animate(now) {
   const mwx = mouseX * NDC_SCALE_X;
   const mwy = mouseY * NDC_SCALE_Y;
 
-  // Wind for cloud visual
   if (activeVisual.applyWind) {
-    activeVisual.applyWind(mwx, mwy, isMouseHeld);
+    activeVisual.applyWind(mwx / sceneScale, mwy / sceneScale, isMouseHeld);
   }
 
   activeVisual.update(features, now * 0.001, mouseX, mouseY);
@@ -182,4 +242,6 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  sceneScale = computeSceneScale();
+  Object.values(VISUALS).forEach(v => v.setScale(sceneScale));
 });

@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import vertShader from '../shaders/fire.vert.glsl?raw';
 import fragShader from '../shaders/fire.frag.glsl?raw';
 
-const PARTICLE_COUNT = 50000;
 const EMBER_FRAC     = 0.15;
 const EMBER_COUNT    = Math.round(PARTICLE_COUNT * EMBER_FRAC);
 const FLAME_COUNT    = PARTICLE_COUNT - EMBER_COUNT;
@@ -78,7 +77,8 @@ function spawnEmber(i, pos, age, drift, sizeArr) {
   sizeArr[i]     = rand(0.3, 0.7);
 }
 
-export function createFireField() {
+export function createFireField(particleCount = 50000) {
+  const PARTICLE_COUNT = particleCount;
   const pos     = new Float32Array(PARTICLE_COUNT * 3);
   const age     = new Float32Array(PARTICLE_COUNT);
   const drift   = new Float32Array(PARTICLE_COUNT);
@@ -161,6 +161,10 @@ export function createFireField() {
   let smoothedAmp = 0;
 
   function triggerOnset() {}
+  function setScale(s) {
+    points.scale.set(s, s, s);
+    sparkPoints.scale.set(s, s, s);
+  }
 
   function triggerSparks(worldX, worldY) {
     const gpuPos = sparkGeo.attributes.position.array;
@@ -269,5 +273,5 @@ export function createFireField() {
     smoothedAmp = 0;
   }
 
-  return { points, sparkPoints, update, triggerOnset, triggerSparks, triggerWave, setVisible, resetPositions };
+  return { points, sparkPoints, update, triggerOnset, triggerSparks, triggerWave, setVisible, setScale, resetPositions };
 }

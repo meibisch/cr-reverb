@@ -19,9 +19,15 @@ export async function initAudio() {
   analyser.connect(ctx.destination);
 }
 
+export function unload() {
+  stop();
+  audioBuffer  = null;
+  startOffset  = 0;
+}
+
 export async function loadAudio(url) {
   await initAudio();
-  stop();
+  unload();
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to load audio: ${response.status}`);
   const arrayBuffer = await response.arrayBuffer();
