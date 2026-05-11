@@ -2,9 +2,7 @@ import * as THREE from 'three';
 import vertShader from '../shaders/fire.vert.glsl?raw';
 import fragShader from '../shaders/fire.frag.glsl?raw';
 
-const EMBER_FRAC     = 0.15;
-const EMBER_COUNT    = Math.round(PARTICLE_COUNT * EMBER_FRAC);
-const FLAME_COUNT    = PARTICLE_COUNT - EMBER_COUNT;
+const EMBER_FRAC = 0.15;
 
 const FIRE_BASE_Y  = -1.6;
 const SPREAD_X     =  1.1;
@@ -79,6 +77,8 @@ function spawnEmber(i, pos, age, drift, sizeArr) {
 
 export function createFireField(particleCount = 50000) {
   const PARTICLE_COUNT = particleCount;
+  const EMBER_COUNT    = Math.round(PARTICLE_COUNT * EMBER_FRAC);
+  const FLAME_COUNT    = PARTICLE_COUNT - EMBER_COUNT;
   const pos     = new Float32Array(PARTICLE_COUNT * 3);
   const age     = new Float32Array(PARTICLE_COUNT);
   const drift   = new Float32Array(PARTICLE_COUNT);
@@ -173,10 +173,10 @@ export function createFireField(particleCount = 50000) {
     for (let i = 0; i < SPARK_COUNT && activated < 80; i++) {
       if (gpuAge[i] >= 1.0) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = rand(0.05, 0.10);
+        const speed = rand(0.018, 0.038);
         sparks[i].active = true;
         sparks[i].vx     = Math.cos(angle) * speed;
-        sparks[i].vy     = Math.sin(angle) * speed + 0.015;
+        sparks[i].vy     = Math.sin(angle) * speed + 0.006;
         sparks[i].vz     = rand(-0.015, 0.015);
         gpuPos[i * 3]     = worldX + rand(-0.15, 0.15);
         gpuPos[i * 3 + 1] = worldY + rand(-0.15, 0.15);

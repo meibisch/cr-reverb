@@ -47,9 +47,9 @@
 
     #playPauseBtn {
       pointer-events: all;
-      width: 52px;
-      height: 52px;
-      border: 1px solid rgba(235, 235, 235, 0.3);
+      width: 64px;
+      height: 64px;
+      border: 1.5px solid rgba(235, 235, 235, 0.6);
       border-radius: 50%;
       background: transparent;
       cursor: pointer;
@@ -61,16 +61,16 @@
     }
 
     #playPauseBtn:hover {
-      border-color: rgba(235, 235, 235, 0.7);
+      border-color: rgba(235, 235, 235, 0.95);
     }
 
     #playPauseBtn svg {
-      fill: rgba(235, 235, 235, 0.7);
+      fill: rgba(235, 235, 235, 0.9);
       transition: fill 0.3s;
     }
 
     #playPauseBtn:hover svg {
-      fill: #ebebeb;
+      fill: #ffffff;
     }
 
     #playPauseBtn .icon-pause { display: none; }
@@ -102,15 +102,7 @@
       color: rgba(235, 235, 235, 0.65);
     }
 
-    #hint {
-      margin-top: 14px;
-      font-size: 11px;
-      letter-spacing: 0.12em;
-      color: rgba(235, 235, 235, 0.18);
-      text-transform: uppercase;
-    }
-
-    #error-msg {
+#error-msg {
       position: fixed;
       bottom: 120px;
       left: 50%;
@@ -141,7 +133,6 @@
         <rect x="11" y="2" width="4" height="14"/>
       </svg>
     </button>
-    <div id="hint">Space to play · Chasing Reverbs</div>
   </div>
 
   <div id="error-msg"></div>
