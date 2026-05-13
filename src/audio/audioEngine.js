@@ -1,67 +1,68 @@
-let ctx = null;
-let analyser = null;
-let source = null;
-let gainNode = null;
-let audioBuffer = null;
-let startOffset = 0;
-let startTime = 0;
-let isPlaying = false;
+// HTMLAudioElement + createMediaElementSource pipeline
+// Works reliably on iOS Safari where fetch+decodeAudioData silently fails for MP3s
 
-export async function initAudio() {
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+
+let ctx         = null;
+let analyser    = null;
+let gainNode    = null;
+let audioEl     = null;  // HTMLAudioElement — replaced per song
+let mediaSource = null;  // MediaElementSourceNode — replaced per song
+let isPlaying   = false;
+
+function ensureContext() {
   if (ctx) return;
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  ctx = new AudioCtx();
+  ctx      = new AudioCtx();
   analyser = ctx.createAnalyser();
-  analyser.fftSize = 2048;
+  analyser.fftSize               = 2048;
   analyser.smoothingTimeConstant = 0.6;
   gainNode = ctx.createGain();
   gainNode.gain.value = 1.0;
-  gainNode.connect(analyser);
-  analyser.connect(ctx.destination);
+  analyser.connect(gainNode);
+  gainNode.connect(ctx.destination);
 }
 
 export function unload() {
-  stop();
-  audioBuffer  = null;
-  startOffset  = 0;
+  try { if (audioEl) { audioEl.pause(); audioEl.src = ''; } } catch (_) {}
+  try { if (mediaSource) mediaSource.disconnect(); } catch (_) {}
+  audioEl     = null;
+  mediaSource = null;
+  isPlaying   = false;
 }
 
 export async function loadAudio(url) {
-  await initAudio();
+  ensureContext();
   unload();
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Failed to load audio: ${response.status}`);
-  const arrayBuffer = await response.arrayBuffer();
-  audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-  startOffset = 0;
+
+  const audio   = new Audio(url);
+  audio.preload = 'auto';
+  audio.onended = () => { isPlaying = false; };
+
+  const src = ctx.createMediaElementSource(audio);
+  src.connect(analyser);
+
+  audioEl     = audio;
+  mediaSource = src;
 }
 
 export async function start() {
-  if (!audioBuffer || isPlaying) return;
+  if (!audioEl || isPlaying) return;
   if (ctx.state === 'suspended') await ctx.resume();
-  source = ctx.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(gainNode);
-  source.start(0, startOffset);
-  startTime = ctx.currentTime - startOffset;
+  await audioEl.play();
   isPlaying = true;
-  source.onended = () => {
-    if (isPlaying) { isPlaying = false; startOffset = 0; }
-  };
 }
 
 export function pause() {
-  if (!isPlaying) return;
-  startOffset = ctx.currentTime - startTime;
-  source.stop();
+  if (!audioEl || !isPlaying) return;
+  audioEl.pause();
   isPlaying = false;
 }
 
 export function stop() {
-  if (!isPlaying) return;
-  try { source.stop(); } catch (_) {}
+  if (!audioEl) return;
+  audioEl.pause();
+  audioEl.currentTime = 0;
   isPlaying = false;
-  startOffset = 0;
 }
 
 export async function toggle() {
@@ -70,7 +71,9 @@ export async function toggle() {
   return isPlaying;
 }
 
-export function getIsPlaying() { return isPlaying; }
+export function getIsPlaying()     { return isPlaying; }
+export function getSampleRate()    { return ctx ? ctx.sampleRate : 44100; }
+export function getFFTSize()       { return analyser ? analyser.fftSize : 2048; }
 
 export function getFrequencyData() {
   if (!analyser) return new Uint8Array(0);
@@ -85,6 +88,3 @@ export function getTimeDomainData() {
   analyser.getByteTimeDomainData(data);
   return data;
 }
-
-export function getSampleRate() { return ctx ? ctx.sampleRate : 44100; }
-export function getFFTSize() { return analyser ? analyser.fftSize : 2048; }
