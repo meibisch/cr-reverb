@@ -9,7 +9,8 @@ let isPlaying = false;
 
 export async function initAudio() {
   if (ctx) return;
-  ctx = new AudioContext();
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  ctx = new AudioCtx();
   analyser = ctx.createAnalyser();
   analyser.fftSize = 2048;
   analyser.smoothingTimeConstant = 0.6;
@@ -35,9 +36,9 @@ export async function loadAudio(url) {
   startOffset = 0;
 }
 
-export function start() {
+export async function start() {
   if (!audioBuffer || isPlaying) return;
-  if (ctx.state === 'suspended') ctx.resume();
+  if (ctx.state === 'suspended') await ctx.resume();
   source = ctx.createBufferSource();
   source.buffer = audioBuffer;
   source.connect(gainNode);
@@ -63,9 +64,9 @@ export function stop() {
   startOffset = 0;
 }
 
-export function toggle() {
+export async function toggle() {
   if (isPlaying) pause();
-  else start();
+  else await start();
   return isPlaying;
 }
 
