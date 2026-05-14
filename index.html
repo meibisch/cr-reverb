@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chasing Reverbs — Play</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ETFJ58EMVM"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-ETFJ58EMVM');
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -18,6 +25,7 @@
     #canvas-container {
       position: fixed;
       inset: 0;
+      touch-action: none;
     }
 
     #canvas-container canvas {
