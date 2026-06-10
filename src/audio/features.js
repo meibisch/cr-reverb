@@ -43,11 +43,13 @@ function bandSum(freqData, lo, hi) {
 }
 
 const loudnessSm = new Smoother(500, 2000, 0);
+const lowSm      = new Smoother(200, 800, 0);
 const highSm     = new Smoother(150, 1200, 0);
 const centroidSm = new Smoother(400, 800, 0);
 const onsetSm    = new Smoother(50, 3000, 0);
 
 const rmsNorm  = new AdaptiveNorm(480);
+const lowNorm  = new AdaptiveNorm(480);
 const highNorm = new AdaptiveNorm(480);
 
 let prevRms = 0;
@@ -55,6 +57,7 @@ let prevRms = 0;
 const features = {
   loudness:        0,
   normalizedEnergy:0,
+  normalizedLow:   0,
   normalizedHigh:  0,
   centroid:        0,
   onsetEnergy:     0,
@@ -66,6 +69,8 @@ export function updateFeatures(freqData, timeDomainData, dtMs) {
   const fftSize    = getFFTSize();
   const binCount   = fftSize / 2;
 
+  const lowLo  = Math.max(hzToBin(20, sampleRate, fftSize), 1);
+  const lowHi  = hzToBin(250, sampleRate, fftSize);
   const highLo = hzToBin(4000,  sampleRate, fftSize);
   const highHi = Math.min(hzToBin(16000, sampleRate, fftSize), binCount - 1);
 
@@ -80,6 +85,7 @@ export function updateFeatures(freqData, timeDomainData, dtMs) {
 
   features.loudness         = smoothRms * 2.5;
   features.normalizedEnergy = rmsNorm.update(smoothRms);
+  features.normalizedLow    = lowNorm.update(lowSm.update(bandSum(freqData, lowLo, lowHi), dtMs));
   features.normalizedHigh   = highNorm.update(highSm.update(bandSum(freqData, highLo, highHi), dtMs));
 
   // Centroid

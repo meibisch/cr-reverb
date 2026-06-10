@@ -3,6 +3,8 @@ uniform vec3  uColorFlame;
 uniform vec3  uColorTip;
 uniform float uTime;
 uniform float uEnergyColorShift;
+uniform float uLowBand;
+uniform float uAliveFrac;
 
 varying float vAge;
 varying float vIsEmber;
@@ -20,10 +22,13 @@ void main() {
 
   if (vIsEmber > 0.5) {
     alpha = (1.0 - smoothstep(0.4, 1.0, dist)) * (1.0 - smoothstep(0.6, 1.0, adjustedAge));
-    float pulse = 0.75 + 0.25 * sin(uTime * 3.0 + vAge * 12.0);
-    color = uColorEmber * pulse;
+    // ember bed breathes with the bass
+    float pulse = 0.65 + (0.20 + 0.25 * uLowBand) * sin(uTime * 3.0 + vAge * 12.0);
+    color = uColorEmber * pulse * (0.85 + uLowBand * 0.45);
   } else {
     alpha = (1.0 - smoothstep(0.2, 1.0, dist)) * (1.0 - smoothstep(0.0, 1.0, adjustedAge));
+    // compensate additive stacking: dense column → dimmer individual flames
+    alpha *= (1.15 - 0.55 * uAliveFrac);
     color = adjustedAge < 0.35
       ? mix(uColorEmber, uColorFlame, adjustedAge / 0.35)
       : mix(uColorFlame, uColorTip,  (adjustedAge - 0.35) / 0.65);
